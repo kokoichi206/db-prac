@@ -154,6 +154,39 @@ WHERE UPPER(EmpLastName) = 'John';
 ``` sql
 CREATE INDEX EmpLastNameUpper
     ON Employees (UPPER(EmpLastName))
+```
 
+
+## sec 3
+
+### 18. 変更できないものはビューを使用
+view とは、あらかじめ定義された SQL クエリの結果として合成されるテーブルのこと。
+
+### 19. ETL
+ETL（Extract, Transform, Load）を使って非リレーショナルデータを情報に変える
+
+### 20. サマリーテーブルの活用
+詳細テーブルのデータを集計するサマリーテーブルを作成し、トリガーを定義する。
+
+### 21. UNION で非正規化データをアンピボット
+和演算 union, はリレーショナルモデルで実行可能な８つの関係代数演算の１つである。和演算は、２つ（以上）のSELECT文によって作成されたデータセットをマージするために使用される
+
+``` sql
+SELECT Category, 'Oct' AS SalesMonth, OctQuantity As Quantity, OctSales AS SalesAmt
+FROM SalesSummary
+UNION
+SELECT Category, 'Nov', NovQuantity, NovSales
+FROM SalesSummary
+UNION
+SELECT Category, 'Dec', DecQuantity, DecSales
+FROM SalesSummary
+UNION
+SELECT Category, 'Jan', JanQuantity, JanSales
+FROM SalesSummary
+UNION
+SELECT Category, 'Feb', FebQuantity, FebSales
+FROM SalesSummary
+ORDER BY SalesMonth, Category;
+```
 
 
