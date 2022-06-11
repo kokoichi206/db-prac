@@ -410,6 +410,107 @@ WHERE EmpDOB >= CAST('1990-01-01' AS Date)
 - 差演算を実行するには、OUTER JOIN
 
 
+## sec 5
+より複雑な集約への需要の高まりを受け、規格の拡張に着手した結果がウィンドウ関数。
 
+### 30. GROUP BY のしくみ
+- GROUP BY により、フィルタリング後のデータセットが集約される
+- HAVING 句により、フィルタリング後の集約されたデータセットが変換される
+
+ISO SQL 規格で定義されている集約関数のうち、よく使用される９つ
+
+- COUNT()
+- SUM()
+- ARG()
+- MIN()
+- MAX()
+- STDDEV_POP(), STDDEV_SAMP()
+- VAR_POP(), VAR_SAMP()
+
+SELECT 句に含まれていて、集約関数が適応されていない例は、GROUP BY 句に含まれていなければならない。
+
+ROLLUP, CUBE, GROUPING SETS,
+
+- WHERE は集約が実行される前に適応される
+- SELECT 句に指定された列のうち、集約関数や計算に含まれていない列は、GROUP BY 句に含まれていなければならない
+- ROLLUP, CUBE, GROUPING SETS を利用すれば、複数の集約クエリを UNION で組み合わせる代わりに、１つのクエリをまとめることができる
+
+### 31. GROUP BY を短く保つ
+SQL/99 以降では、関数従属性（functional dependencyl）が認識されているため、「集約されない列はすべて GROUP BY 句に含まれてなければならない」ということはない
+
+- データを正しく集約するために必要な列だけが GROUP BY 句に含まれるようにする
+
+### 32. GROUP BY, HAVING
+- グループ化を実行する前の行のフィルタリングには、WHERE 句を使用する。
+- グループ化を実行した後の行のフィルタリングには、HAVING 句を使用する。
+
+### 33. GROUP BY を使用せずに最大値や最小値の特定
+``` sql
+SELECT l.Category, l.MaxABV AS LeftMaxABV,
+        r.MaxABV AS RightMaxABV
+FROM BeerStyles AS l
+    LEFT JOIN BeerStyles AS r
+        ON l.Category = r.Category
+            AND l.MaxABV < r.MaxABV;
+
+-- 
+SELECT l.Category, l.Country, l.Style, l.MaxABV AS MaxAlcohol
+FROM BeerStyles AS l
+    LEFT JOIN BeerStyles AS r
+        ON l.Category = r.Category
+            AND l.MaxABV < r.MaxABV
+WHERE r.MaxABV IS NULL
+ORDER BY l.Category;
+```
+
+- LEFT JOIN を使って「メイン」テーブルをそれ自体に結合する必要がある
+
+
+### 34. OUTER JOIN を使用するときは COUNT() に注意
+- null 値を含んでいる行を含め、全ての行をカウントしたい場合は、`COUNT(*)` を使用
+- 列の値が NULL ではない行だけをカウントしたい場合は、COUNT(\<列名\>)を使用
+    - OUTER JOIN の場合は NULL が出るんで注意
+- ちょいとばす
+
+### 35. HAVING COUNT(x) < N で値が0の行もカウントする
+- カウントが０の検索は、INNER JOIN を使用する場合はうまくいかない
+
+### 36. 重複なしのカウントに DISTINCT
+``` sql
+SELECT COUNT(CASE WHEN OrderTotal > 1000 THEN CustomerID END) AS TotalOrders
+FROM Orders;
+```
+
+- COUNT() の引数として関数を使用することを検討する
+    - WHERE 句がなくても計算を組み合わせることが可能に
+
+### 37. ウィンドウ関数
+SQL:2003 策定以前、SQLにはそもそも「隣接する行」という概念がなかった。
+累積和の生成など。
+
+「ウィンドウ」は、該当の行の前後にある一連の行を表す。
+
+``` sql
+SELECT o.OrderNumber, o.CustomerID, o.OrderTotal,
+    SUM(o.OrderTotal) OVER (
+        PARTITION BY o.CustomerID
+        ORDER BY o.OrderNumber, o.CustomerID
+    ) AS TotalByCustomer,
+    SUM(o.OrderTotal) OVER (
+        ORDER BY o.OrderNumber
+    ) AS TotalOverall
+FROM Orders AS o
+ORDER BY o.OrderNumber, o.CustomerID
+```
+
+- OVER 句はウィンドウを使用することを表している
+- ウィンドウ関数は行の範囲を「認識」するため、従来の集計関数や文レベルのグループ化を使用する場合よりも、累積計算や移動集計の生成が容易になる
+
+
+### 38. 行をランク付けする
+- Skip
+
+### 39. 移動集計を生成
+- Skip
 
 
