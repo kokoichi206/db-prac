@@ -190,3 +190,226 @@ ORDER BY SalesMonth, Category;
 ```
 
 
+## sec 4
+
+### 22. 関係代数（relational algebra）
+- 選択（制限）
+    - 行にフィルターを適応してサブセットを取得する演算
+    - WHERE, HAVING
+- 射影
+    - 返される列を選択
+- 結合
+    - 全てのテーブル（リレーション）に一意な識別子が定義されてなければならない
+    - 関連元のテーブルに関連先のテーブルの一意な識別子（外部キー）のコピーが含まれてなければならない
+- 交差
+    - まったく同じ列を持つ２つのテーブルで実行
+    - INTERSECT
+    - INNER JOIN 等で同様の結果を得ることが可能
+- 直積
+    - Cartesian product
+    - １つ目のテーブルの全ての行を、２つ目のテーブルの全ての行と組み合わせた結果
+- 和
+    - union
+    - まったく同じ列を持つ２つのテーブルをマージする演算
+- 商
+    - 商演算をサポートしているデータベースシステムは１つもない
+- 差
+    - 一方のテーブルからもう一方のテーブルを差し引く演算
+
+``` sql
+-- Skateboard を注文したが Helmet を注文していない顧客リスト
+SELECT c.CustFirstName, c.CustLastName
+FROM Customrs AS c
+WHERE c.CustomerID IN
+    (SELECT o.CustomerID
+    FROM Orders AS o
+        INNER JOIN Order_Details AS od
+            ON o.OrderNumber = od.OrderNumber
+        INNER JOIN Products AS p
+            ON p.ProductNumber = od.ProductNumber
+    WHERE p.ProductName = 'Skateborad')
+EXCEPT
+SELECT c2.CustFirstName. c2.CustLastName
+FROM Customrs AS c2
+WHERE c.CustomerID IN
+    (SELECT o.CustomerID
+    FROM Orders AS o
+        INNER JOIN Order_Details AS od
+            ON o.OrderNumber = od.OrderNumber
+        INNER JOIN Products AS p
+            ON p.ProductNumber = od.ProductNumber
+    WHERE p.ProductName = 'Helmet');
+```
+
+### 23. 条件と一致しないレコードや欠けているレコード特定
+``` sql
+-- 購入されていない製品を特定
+SELECT p.ProductNumber, p.ProductName
+FROM Products AS p
+WHERE p.ProductNusmber
+    NOT IN (SELECT ProductNumber FROM Order_Details);
+```
+
+このクエリの実行コストはかなり高い！
+Order_Details の全てのレコードにアクセスし重複値を取り除いた上で、Products テーブルで照合しなければならないから。
+
+理論的には、EXISTSを使用する方がNOT INを使用するよりも高速なはず。
+クエリエンジンが最初の行を見つけた時点で、サブクエリの処理を終了できるから。
+
+``` sql
+SELECT p.ProductNumber, p.ProductName
+FROM Products AS p
+WHERE NOT EXISTS
+    (SELECT *
+    FROM Order_Details AS od
+    WHERE od.ProductNumber = p.ProductNumber);
+```
+
+別のアプローチとしては、LEFT JOIN 演算子と null 値を検索する WHERE の組み合わせ。
+
+``` sql
+SELECT p.ProductNumber, p.ProductName
+FROM Products AS p LEFT JOIN Order_Details AS od
+    ON p.ProductNumber = od.ProductNumber
+WHERE od.ProductNumber IS NULL;
+```
+
+どのアプローチが適してるかの明確な答えはない！
+
+
+### 24. CASE
+``` sql
+CASE Students.Gender
+    WHEN 'M' THEN 'Male'
+    WHEN 'F' THEN 'Female'
+    ELSE 'Unknown' END
+
+CASE Readings.Measure
+    WHEN 'C'
+    THEN 2b
+```
+
+### 25. 複数の条件を使用する問題の解決
+``` sql
+CREATE FUNCTION CustProd(@ProdName varchar(50)) RETURNS Table
+AS
+RETURN
+    (SELECT Orders.CustormerID AS CustID
+    FROM Orders
+        INNER JOIN Order_Details
+            ON Orders.OrderNumber = Order_Details.OrderNumber
+        INNER JOIN Products
+            ON Products.ProductNumber
+    WHERE ProductName = @ProdName);
+
+SELECT C.CustomerID, C.CustFirstName, C.CustLastName
+FROM Customers AS C
+WHERE C.CustomerID IN
+    (SELECT CustID FROM CustProd('Skateboard'))
+AND C.CustomerID IN
+    (SELECT CustID FROM CustProd('Helmet'))
+AND C.CustomerID IN
+    (SELECT CustID FROM CustProd('Kee Pads'))
+AND C.CustomerID IN
+    (SELECT CustID FROM CustProd('Gloves'));
+```
+
+### 26. 完全に一致させる場合のデータ分割
+商演算によって解決できる一般的な問題
+
+- 募集条件を全て満たしている応募者の検索
+- コンポーネントを構築するための部品を全て供給できるサプライヤーのリストアップ
+- 特定の製品を注文した顧客全員の表示
+
+### 27. 日付と時刻の列で日付の範囲を正しくフィルタリング
+``` sql
+CREATE TABLE ProgramLogs (
+    LogID int PRIMARY KEY,
+    LogUserID varchar(20) NOT NULL,
+    LogDate timestamp NOT NULL,
+    Logger varchar(50) NOT NULL,
+    LogLevel varchar(10) NOT NULL,
+    LogMessage varchar(1000) NOT NULL
+);
+
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (1, 'Doug', '2016-07-04 09:15:32', 'ABC', '1', 'Sorry, something went wrong. A team of highly trained monkeys has been dispatched to deal with this situation.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (2, 'Ben', '2016-07-04 11:23:12', 'BCD', '2', 'One of us has made a mistake, and I''m not pressing the button.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (3, 'John', '2016-07-04 13:54:02', 'ABC', '1', 'Your computer has performed an illegal operation and will be shut down. 911 has been called.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (4, 'Doug', '2016-07-04 15:03:23', 'XYZ', '2', 'Something went wrong. You''re on your own.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (5, 'Doug', '2016-07-04 23:58:02', 'EFG', '2', 'You really screwed up this time.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (6, 'Doug', '2016-07-04 23:58:12', 'CDE', '4', 'Run away as fast as you can, and don''t look back.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (7, 'Ben', '2016-07-05', 'ABC', '3', 'It''s been a while since an error was logged. System will now crash.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (8, 'Ben', '2016-07-05 00:03:35', 'EFG', '4', 'User error. Please replace user.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (9, 'John', '2016-07-05 08:10:02', 'EFG', '3', 'An unknown error has occurred. The error is unknown because the guy who wrote this part of the code quit a while back and he was like real real smart and the rest of us aren''t sure how it works.');
+INSERT INTO ProgramLogs (LogID, LogUserID, LogDate, Logger, LogLevel, LogMessage) VALUES (10, 'Doug', '2016-07-05 12:32:01', 'XYZ', '4', 'User error. It''s not our fault!');
+
+-- 特定の日のログメッセージを表示したい
+SELECT L.LogUserID, L.Logger, L.LogLevel, L.LogMessage
+FROM ProgramLogs AS L
+WHERE L.LogDate = CAST('7/4/2016' AS timestamp);
+
+-- postgresql
+SELECT L.LogUserID, L.Logger, L.LogLevel, L.LogMessage
+FROM ProgramLogs AS L
+WHERE L.LogDate BETWEEN CAST('2016-07-04' AS timestamp) 
+    AND CAST('2016-07-04 23:59:59.999' AS timestamp);
+
+-- ユーザーによる日付指定を可能に
+PREPARE test(date, date) AS
+SELECT L.LogUserID, L.Logger, L.LogLevel, L.LogMessage
+FROM ProgramLogs AS L
+WHERE L.LogDate >= $1
+    AND L.LogDate < ($2 + INTERVAL '1 DAYS');
+EXECUTE test('2016-07-04', '2016-07-04');
+DEALLOCATE test;
+```
+
+- インデックスによった検索が不可能になるため、datetime 型の列には関数を使用しない
+- 丸誤差が原因で datetime 型の値が正確でなくなることがあるため、BETWEEN ではなく、>= と < を利用する
+
+### 28. インデックスが使用されるようなクエリ
+WHERE, ORDER BY, GROUP BY, HAVING といったクエリの述語が sargable (Search ARGument ABLE) である必要がある。
+
+- 一般に『sargable』
+    - =
+    - \>
+    - <
+    - \>=
+    - <=
+    - BETWEEN
+    - LIKE (先頭ワイルドカードなし)
+    - IS [NOT] NULL
+- わんちゃん『sargable』だが、ほとんどの場合パフォーマンスが向上しない
+    - \<>
+    - IN
+    - OR
+    - NOT IN
+    - NOT EXISTS
+    - NOT LIKE
+- 『sargable』ではないクエリになる
+    - １つ以上のフィールド操作する関数を WHERE 句の条件で使用する
+    - WHERE 句でフィールドの値を使って算術演算を実行する場合
+    - LIKE '%something%' のようなワイルドカード検索を使用する場合
+
+``` sql
+-- インデックスが使用されない
+SELECT *
+FROM Employees
+WHERE YEAR(EmpDOB) = 1990;
+
+-- インデックスが使用される
+SELECT *
+FROM Employees
+WHERE EmpDOB >= CAST('1990-01-01' AS Date)
+    AND EmpDOB < CAST('1991-01-01' AS Date);
+```
+
+ワイルドカードが文字列の末尾にしかない場合、インデックスが使用される場合がある（が、このことはインデックスが使用されるという保証にはならない）
+
+### 左結合の右側でフィルタリングを正しく行う
+- 差演算を実行するには、OUTER JOIN
+
+
+
+
+
