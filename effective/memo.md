@@ -514,3 +514,143 @@ ORDER BY o.OrderNumber, o.CustomerID
 - Skip
 
 
+## sec 6
+一般に、テーブル名を使用できる場所では、サブクエリを使用できる。
+
+### 40. サブクエリの使用可能場所
+テーブルサブクエリ。
+
+単一列のテーブルサブクエリ。
+
+
+``` sql
+SELECT Products.ProductName
+FROM Products
+WHERE Products.ProductNumber NOT IN
+    (
+        SELECT Order_Details.ProductNumber
+        FROM Orders
+            INNER JOIN Order_Details
+                ON Order.OrderNumber = Order_Details.OrderNumber
+        WHERE Orders.OrderDate BETWEEN '2015-12-01' AND '2015-12-31'
+    );
+```
+
+スカラーサブクエリ。
+
+``` sql
+SELECT Products.ProductNumber, Products.ProductName,
+    (
+        SELECT MAX(Orders.OrderDate)
+        FROM Orders
+            INNER JOIN Order_Details
+                ON Orders.OrderNumber = Order_Details.OrderNumber
+        WHERE Order_Details.ProductNumber = Products.ProductNumber
+    ) AS LastOrder
+FROM Products;
+```
+
+``` sql
+SELECT Vendors.VendName,
+    AVG(Product_Vendors.DaysToDeliver) AS AvgDelivery
+FROM Vendors
+    INNER JOIN Product_Vendors
+        ON Vendors.VendorID = Product_Vendors.VendorID
+GROUP BY Vendors.VendName
+HAVING AVG(Product_Vendors.DaysToDeliver) >
+    (
+        SELECT AVG(DaysToDeliver) FROM Product_Vendors
+    );
+```
+
+### 41. 相関サブクエリと非相関サブクエリ
+相関サブクエリ。
+WHERE または HAVING 句でフィルターを１つ以上使用する。これらのフィルターは、外側のクエリによって提供される値に依存する。この依存性により、サブクエリは外側のクエリと「相互関係」にある。そのため、クエリによって返される行ごとにサブクエリを実行する必要があり、効率が悪い可能性がある（常にそうとは限らない）。
+
+FROM 句のデータセットの１つとして相関サブクエリを使用することは考えにくい。代わりに JOIN を使用する方が単純明快だから。
+
+``` sql
+SELECT Recipe_Classes.RecipeClassDescription,
+    (
+        SELECT COUNT(*)
+        FROM Recipes
+        WHERE Recipes.RecipeClassID = Recipe_Classes.RecipeClassID
+    ) AS RecipeCount
+FROM Recipe_Classes;
+```
+
+実は相関サブクエリはほとんどのデータベースシステムにおいて最適化されるため、パフォーマンスは悪くはない。
+
+### 42. できるだけサブクエリより CTE
+Comman Table Expression。WITH 句を使って定義。
+
+``` sql
+WITH CustProd AS
+    (
+        SELECT Orders.CustomerID, Products.ProductName
+        FROM Orders
+            INNER JOIN Order_Details
+                ON Orders.OrderNumber = Order_Details.ProductNumber
+    ),
+    SkateboardOrders AS
+    (
+        SELECT DISTINCT CustomerID
+        FROM CustProd
+        WHERE ProductName = 'Skateboard'
+    )
+
+SELECT c.CustomerID, c.CustFirstName
+FROM Customers AS c
+    INNER JOIN SkateboardOrders AS OSk
+        ONc.CustomerID = OSk.CustomerID;
+```
+
+クエリが大幅に短くなり、可読性の向上につながる。
+
+再帰的 CTE
+
+``` sql
+-- 1 ~ 100 の数字のリストを生成
+WITH SeqNumTbl AS
+    (
+        SELECT 1 AS SeqNum
+        UNION ALL
+        SELECT SeqNum + 1
+        FROM SeqNumTbl
+        WHERE SeqNum < 100
+    )
+
+SELECT SeqNum
+FROM SeqNumTbl;
+```
+
+``` sql
+WITH MgrEmpts (
+    ManagerID, ManagerName, EmployeeID, EmployeeName, EmployeeLevel) AS
+    (
+        SELECT ManagerID, CAST(' ' AS varchar(50)), EmployeeID,
+            CAST(CONCAT(EmpFirstName, ' ', EmpLastName) AS varchar(50)),
+            0 AS EmployeeLevel
+        FROM Employees
+        WHERE ManagerID IS NULL
+        UNION ALL
+        SELECT e.ManagerID, d.EmployeeName, e.EmployeeID,
+            CAST(CONCAT(EmpFirstName, ' ', EmpLastName) AS varchar(50)),
+            EmployeeLevel + 1
+        FROM Employees AS e
+            INNER JOIN MgrEmps AS d
+                ON e.ManagerID = d.EmployeeID
+    )
+
+SELECT ManagerID, MangerName, EmployeeID, EmployeeName, EmployeeLevel
+FROM MgrEmps
+ORDER BY ManagerID;
+```
+
+- CTE の利用で、同じサブクエリを複数回使用する複雑なクエリを単純化できる
+- CTE の利用で、関数を使用する必要はなくなる
+    - 関数は誤って変更される可能性あり
+
+### 43. サブクエリより結合の方が効率的？
+データベースエンジンは大抵結合を最適化できる！
+
