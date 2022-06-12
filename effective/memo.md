@@ -764,3 +764,69 @@ ORDER BY CustProd.CustomerID, CustProd.ProductName;
 ### 50. カテゴリをリストアップし、第一希望、第二希望、、と照合する
 
 
+## sec 9
+タリーテーブル（tally table）は、通常は１つの列だけで構成されたテーブルであり、１（or 0）からその状況に応じた最大値までの連続する数字が含まれている。
+
+直積はベーステーブルの実際の値に依存するのに対し、タリーテーブルはすべての可能性をカバーする。
+
+### 51. 空のデータ行を生成
+- 特にレポートにおいて、からのデータ行の生成が役に立つことがある
+- 数値との比較に基づいて複数の行を人工的に生成するのに役立つ
+
+### 53. 
+- データベースで見つからない値を生成するには、タリーテーブルを使用する
+    - 基本は、データベースである値しか作成できない
+
+### 54. タリーテーブルの値の範囲に基づいて別のテーブルの値を変換
+GROUP BY の問題点の１つは、データを集計するににはそれらの値が同じでなければならないこと！場合によっては、値の範囲を同じように扱いたいこともある。
+
+``` sql
+WITH StudentGrades (Student, Subject, FinalGrade) AS (
+    SELECT stu.SutudentFirstNM AS Student,
+        sub.SubjectNM AS Subject, ss.FinalGrade
+    FROM StudentSubjects AS ss
+        INNER JOIN Students AS stu
+            ON ss.StudentID = stu.StudentID
+        INNER JOIN Subjects AS sub
+            ON ss.SubjectID = sub.SubjectID
+)
+
+SELECT ag.Subject, gr.LetterGrade, COUNT(*) AS NumberOfStudents
+FROM StudentGrades AS sg
+    INNER JOIN GradeRanges AS gr
+        ON sg.FinalGrade >= gr.LowGradePoint
+            AND sg.FinalGrade <= gr.HighGradePoint
+GROUP BY sg.Subject, gr.LetterGrade
+ORDER BY sg.Subject, gr.LetterGrade
+```
+
+### 55. 日付テーブルを使って日付の計算を単純化
+日付と時刻は問題と隣り合わせのテーブル型である。
+
+- 日付や、日付に基づく計算に大きく依存するアプリケーションでは、日付テーブルを作成するとロジックが大幅に単純になることがある
+- 日付テーブルは拡張可能、休業日、会計年度など、アプリケーション固有のドメインを追加できる
+- 日付テーブルはディメンジョンテーブルであるため、インデックスを必要なだけ作成できる（？）
+
+### 56. 特定の期間内の日付が全て列挙された予定表の作成
+``` sql
+CREATE TABLE Appointments (
+    AppointmentID int IDENTITY (1, 1) PRIMARY KEY,
+    ApptStartDate date NOT NULL,
+    ApptStartTime time NOT NULL,
+    ApptEndDate date NOT NULL,
+    ApptEndTime time NOT NULL,
+    ApptDescription varchar(50) NULL
+)
+```
+
+日付フィールドと時刻フィールドに別々に格納しておくと、sargable クエリを記述するのが容易になる。
+
+- 日付テーブルには、適切なインデックスを作成しておく
+- 使用している RDBMS で日付と時刻を適切に処理する方法を理解する
+
+### 57. タリーテーブルを使ったデータのピボット選択
+- データのピボット選択が必要な場合、データベースシステムによっては、カスタム構文がサポートされていることがある
+
+
+
+
