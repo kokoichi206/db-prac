@@ -828,5 +828,133 @@ CREATE TABLE Appointments (
 - データのピボット選択が必要な場合、データベースシステムによっては、カスタム構文がサポートされていることがある
 
 
+## sec 10
+SQL は階層型のデータモデルを扱うようなものではない（苦手分野）。階層型のデータモデルを SQL データベースで作成する必要が生じるたびに、トレードオフを強いられる。データの正規化をとるのか、それともメタデータの取得と管理の容易さをとるのか。
+
+### 58. 隣接リストモデル（adjacency list model）
+従業員のモデルに対し、その上司を把握したいとする。カラムに上司の EmployeeID を持たせる、つまり、外部キー制約を持つテーブルに列を作成し、そのテーブルの主キーを参照させればよい。
+
+このように『同じテーブルの主キーを参照する外部キーを作成』すれば、１つのテーブルで無限の深さの階層を作成できる！
+ 
+``` sql
+-- 自己参照の外部キー！
+CREATE TABLE Employees (
+    EmployeeID int PRIMARY KEY,
+    EmpName varchar(255) NOT NULL,
+    EmpPosition varchar(255) NOT NULL,
+    SupervisorID int NULL
+);
+
+ALTER TABLE Employees
+    ADD FOREIGN KEY (SupervisorID)
+        REFERENCES Employees (EmployeeID);
 
 
+-- 3レベルの自己結合
+SELECT e1.EmpName AS Employee, e2.EmpName AS Supervisor,
+    e3.EmpName AS SupervisorsSupervisor
+FROM Employees AS e1
+    LEFT JOIN Employees AS e2
+        ON e1.SupervisorID = e2.EmployeeID
+    LEFT JOIN Employees AS e3
+        ON e2.SupervisorID = e3.EmployeeID
+```
+
+- 隣接リストモデルでは、テーブルに列を追加し、そのテーブルの主キーを参照する外部キーを使用
+    - メタデータは不要！
+
+### 59. 更新が頻繁に発生しない場合は、入れ子集合モデルでクエリ高速化！
+入れ子集合（nested set）。
+
+- 小ノードを持たないノードでは、「左」の番号と「右」の番号の差は１である
+
+``` sql
+CREATE TABLE Employees (
+    EmployeeID int PRIMARY KEY,
+    EmpName varchar(255) NOT NULL,
+    EmpPosition varchar(255) NOT NULL,
+    SupervisorID int NULL,
+    lft int NULL,
+    rgt int NULL);
+
+-- 指定されたノードの子孫を全て検索
+SELECT e.*
+FROM Employees AS e
+WHERE e.left >= @lft AND e.rgt <=@rgt;
+
+-- 特定のノードの祖先を全て検索
+SELECT *
+FROM Employees AS e
+WHERE e.lft <= @lft AND e.rgt >= @rgt;
+```
+
+- 階層が頻繁に更新される場合には適していない
+- 単一ルートの階層を１つだけ使用する場合に適している
+
+### 60. 限定的な検索には経路実体化モデル（materialized path）
+概念上は、ファイルシステムのパスを使用するのと何ら変わらない。フォルダとファイルの代わりに主キーを使用する。
+
+``` sql
+CREATE TABLE Employees (
+    EmployeeID int PRIMARY KEY,
+    EmpName varchar(255) NOT NULL,
+    EmpPosition varchar(255) NOT NULL,
+    SupervisorID int NULL,
+    HierarchyPath varchar(255)
+)
+```
+
+HierarchyPath には、たとえば 12 の ID のユーザーには `1/3/8/12` のように入れる。
+
+``` sql
+-- 特定のノードの子孫をすべて検索
+SELECT e.*
+FROM Employees AS e
+WHERE e.HierarchyPath LIKE @Nodepath + '%';
+-- 2 -> 1/2 の部下の従業員を全て見つけ出す方法
+-- @Nodepath に 1/2/ を指定
+```
+
+- 経路実体化モデルでの検索は、事実上、一方公に限られている
+    - 術後の先頭 or 途中にワイルドカードが含まれている場合「sargable クエリ」を作成するのが不可能だから
+
+### 61. 複雑な検索にはクロージャモデル
+先祖クロージャテーブル（ancestry closure table）を使用する。これは「経路実体化モデル」のリレーショナルアプローチであり、２つ目のテーブルを用意し、ノード間の「つながり」ごとにメタデータのレコードを作成する。
+
+``` sql
+CREATE TABLE Employees (
+    EmployeeID int NOT NULL PRIMARY KEY,
+    EmpName varchar(255) NOT NULL,
+    EmpPosition varchar(255) NOT NULL,
+    SupervisorID int NULL,
+);
+
+CREATE TABLE EmployeesAncestry (
+    SupervisedEmployeeID int NOT NULL,
+    SupervisingEmployeeID int NOT NULL,
+    Distance int NOT NULL,
+    PRIMARY KEY (SupervisedEmployeeID, SupervisingEmployeeID)
+);
+
+ALTER TABLE EmployeesAncestry
+    ADD CONSTRAINT FK_EmployeesAncestry_SupervisingEmployeeID
+        FOREIGN KEY (SupervisingEmployeeID)
+            REFERENCES Employees (EmployeeID);
+
+ALTER TABLE EmployeesAncestry
+    ADD CONSTRAINT FK_EmployeesAncestry_SupervisedEmployeeID
+        FOREIGN KEY (SupervisedEmployeeID)
+            REFERENCES Employees (EmployeeID);
+```
+
+- クロージャテーブルの管理は複雑
+- 頻繁な更新と容易な検索が必要な場合のみ、有効
+
+
+## 日付型
+
+### PostgreSQL
+- DATE
+- TIME [タイムゾーン]
+- TIMESTAMP [タイムゾーン]
+- INTERVAL
