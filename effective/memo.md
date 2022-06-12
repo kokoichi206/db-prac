@@ -708,4 +708,59 @@ SQLは取得したいデータを宣言型で定義するためのものであ�
 - 優れた実行プランを生成できるようにインデックスを追加する
 
 
+## sec 8
+SQL で直積を生成するには CROSS JOIN を使用する。
+
+### 47. 間接的に関連しているテーブルの行の特定
+``` sql
+-- 直積を使って全ての顧客とすべての製品のリストを取得
+SELECT c.CustomerID, c.CustFirstName, c.CustLastName,
+    p.ProductNumber, p.ProductName, p.ProductDescription
+FROM Customers AS c, Products AS p;
+
+-- 購入された製品をリストアップ
+SELECT o.OrderNumber, o.CustomerID, od.ProductNumber
+FROM Orders AS O
+    INNER JOIN Order_Details AS od
+        ON o.OrderNumber = od.OrderNumber;
+
+-- 直積の行のうち、購入されたものとされてないものを特定する
+SELECT CustProd.CustomerID, CustProd.CustFirstName, CustProd.CustLastName,
+    CustProd.ProductNumber, CustProd.ProductName,
+    (CASE WHEN OrdDet.OrderCount > 0
+        THEN 'You purchased this!'
+        ELSE ' '
+        END
+    ) AS ProductOrdered
+FROM
+(
+    SELECT c.CustomerID, c.CustFirstName, c.CustLastName,
+        p.ProductNumber, p.ProductName, p.ProductDescription
+    FROM Customers AS c, Products AS p
+) AS CustProd
+LEFT JOIN
+    (
+        SELECT o.CustomerID, od.ProductNumber, COUNT(*) AS OrderCount
+        FROM Orders AS o
+            INNER JOIN Order_Details AS od
+                ON o.OrderNumber = od.OrderNumber
+        GROUP BY o.CustomerID, od.ProductNumber
+    ) AS OrdDet
+    ON CustProd.CustomerID = OrdDet.CustomerID
+        AND CustProd.ProductNumber = OrdDet.ProductNumber
+ORDER BY CustProd.CustomerID, CustProd.ProductName;
+```
+
+- 2つのテーブル内のレコードをあらゆる方法で組み合わせるには、直積を使用
+- 実際に発生した組み合わせの特定には、INNER JOIN を使用
+
+### 48. 行を等量分類でランク付け
+上位20%, 40%, 60%, 80% など、バンド幅で結果を格付けする。
+
+- ウィンドウ関数 RANK() を利用すれば、ランク付けされた値を簡単に生成できる
+
+### 49. テーブルの行を他の全ての行と組み合わせる
+
+### 50. カテゴリをリストアップし、第一希望、第二希望、、と照合する
+
 
