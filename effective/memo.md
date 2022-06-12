@@ -654,3 +654,58 @@ ORDER BY ManagerID;
 ### 43. サブクエリより結合の方が効率的？
 データベースエンジンは大抵結合を最適化できる！
 
+
+## sec 7
+
+### 44. クエリアナライザ
+DBMS にはそれぞれ機能が異なる部分があり、あるアプローチが別の DBMS ではうまくいかないことがある。それではどのようにパフォーマンスを改善したら良いのだろうか？
+
+DBMS で SQL 文が実行されるとき、その前に SQL 文をもっとも効果的に実行する方法が DBMS のオプティマイザによって決定される。
+
+- PostgreSQL
+    - EXPLAIN
+    - ANALYZE
+    - VERBOSE
+    - COSTS
+    - BUFFERS
+    - TIMING
+    - FORMAT
+- バインドパラメータを含んでいる SQL に対して EXPLAIN を使用する。
+- pgAdmin ツールが　GUI ツールとして便利
+
+### 45. DB のメタデータ
+``` sql
+SELECT t.TABLE_NAME, t.TABLE_TYPE
+FROM INFORMATION_SCHEMA.TABLES AS t
+WHERE t.TABLE_TYPE IN ('BASE TABLE', 'VIEW');
+
+-- 主キーが定義されていないテーブルのリストを取得
+SELECT t.TABLE_NAME
+FROM
+    (
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_TYPE = 'BASE TABLE'
+    ) AS t
+    LEFT JOIN
+    (
+        SELECT TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE
+        FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_TYPE = 'PRIMARY KEY'
+    ) AS tc
+    ON t.TABLE_NAME = tc.TABLE_NAME
+WHERE tc.TABLE_NAME IS NULL;
+```
+
+### 46. 実行プラン
+SQLは取得したいデータを宣言型で定義するためのものであり、そのデータをもっとも効率的な方法で特定する方法はオプティマイザに委ねられる。
+
+ゾウとネズミの問題。
+対象の DB の行数が変われば、実行プランを再生成すべきである。より効率的な手順はデータの分散状況に依存している。ストアドプロシージャなど、パラメータ化されたクエリの実行プランを、データベースがキャッシュする場合に、特に問題になる！
+
+- 使用されていないインデックスがないか、またその原因を調べる
+- 実行プランが効率的かは、データの分散状況に依存する
+- 優れた実行プランを生成できるようにインデックスを追加する
+
+
+
