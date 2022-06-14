@@ -31,3 +31,10 @@ $ echo {1..10} | xargs shuf -e
 8
 ```
 
+
+
+### SQL
+``` sql
+CREATE TABLE users (id int PRIMARY KEY, name text);
+```
+
