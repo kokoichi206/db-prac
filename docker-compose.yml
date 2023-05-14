@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=ubuntu
+      - POSTGRES_PASSWORD=sakamichi
+      - POSTGRES_DB=nogi-official
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_volume:/var/lib/postgresql
+volumes:
+  postgres_volume:
