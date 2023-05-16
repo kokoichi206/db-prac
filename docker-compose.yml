@@ -9,5 +9,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_volume:/var/lib/postgresql
+      - ./backup/data:/backup/data
 volumes:
   postgres_volume:
