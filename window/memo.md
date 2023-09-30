@@ -37,6 +37,38 @@ CREATE TABLE fans (
 )
 ```
 
+``` sql
+SELECT m.name, b.link, title, AVG(LENGTH(title)) OVER (PARTITION BY member_code), AVG(LENGTH(content)) OVER (PARTITION BY member_code) FROM blogs b INNER JOIN members m ON m.code = b.member_code;
+
+SELECT SUM(LENGTH(content)) OVER (PARTITION BY member_code) FROM blogs;
+
+WITH TEMP ( total ) AS ( SELECT SUM(LENGTH(content)) FROM blogs )
+SELECT member_code, ROUND ( COUNT(LENGTH(content))*100 / total, 3 )
+FROM blogs CROSS JOIN TEMP
+GROUP BY member_code, total; -- total を忘れない！
+
+
+WITH TEMP ( total ) AS ( SELECT SUM(LENGTH(content)) FROM blogs )
+SELECT member_code, ROUND ( SUM(LENGTH(content))*100 / total, 3 )
+FROM blogs CROSS JOIN TEMP
+GROUP BY member_code, total; -- total を忘れない！
+
+WITH TEMP ( total ) AS ( 
+    SELECT SUM(LENGTH(content))::FLOAT FROM blogs 
+)
+SELECT member_code, ROUND( ((SUM(LENGTH(content))::FLOAT * 100) / total)::NUMERIC, 3 ) AS percentage
+FROM blogs CROSS JOIN TEMP
+GROUP BY member_code, total; -- total を忘れない！
+
+
+WITH TEMP ( total ) AS ( 
+    SELECT SUM(LENGTH(content))::FLOAT FROM blogs 
+)
+SELECT member_code, SUM(LENGTH(content)), total
+FROM blogs CROSS JOIN TEMP
+GROUP BY member_code, total; -- total を忘れない！
+```
+
 ### 関数？
 
 ROW_NUMBER()
