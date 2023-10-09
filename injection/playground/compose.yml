@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    command: postgres -c log_destination=stderr -c log_statement=all -c log_connections=on -c log_disconnections=on
+    environment:
+      - POSTGRES_USER=ubuntu
+      - POSTGRES_PASSWORD=ubuntu
+      - POSTGRES_DB=postgres
+    logging:
+      options:
+        max-size: "10k"
+        max-file: "5"
+    ports:
+      - "4949:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
