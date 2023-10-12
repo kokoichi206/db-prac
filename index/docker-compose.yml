@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=ubuntu
+      - POSTGRES_PASSWORD=ubuntu
+      - POSTGRES_DB=posgre
+    ports:
+      - "5678:5432"
+    volumes:
+      - postgres_volume:/var/lib/postgresql
+      - ./backup/data:/backup/data
+
+volumes:
+  postgres_volume:
