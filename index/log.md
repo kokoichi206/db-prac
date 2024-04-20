@@ -8,9 +8,22 @@ Type "help" for help.
 Did not find any relations.
 
 CREATE TABLE cards (
-   mark text,
-   number text
+   mark varchar(255),
+   number varchar(255)
 );
+
+CREATE TABLE cards (
+   mark char(255),
+   number char(255)
+);
+
+CREATE TABLE cards (
+   mark char(4098),
+   number char(4099)
+);
+CREATE INDEX idx_cards ON cards(mark, number);
+
+
 CREATE TABLE
 
 CREATE INDEX idx_cards ON cards(mark, number);

@@ -12,6 +12,11 @@ WHERE tablename = 'comments_pkey';
 
 CREATE TABLE kawaiis (
     generation int,
+    name char(46)
+);
+
+CREATE TABLE kawaiis (
+    generation int,
     first char(46),
     last char(46)
 );
@@ -21,7 +26,7 @@ CREATE TABLE kawaiis (
 ``` sh
 psql --host=localhost --username=ubuntu --dbname=nogi-official -c "INSERT INTO kawaiis VALUES (1, 'pi')";
 
-echo {1..5}{a..z} | xargs -n 1 bash -c "psql --host=localhost --username=ubuntu --dbname=nogi-official -c \"INSERT INTO kawaiis VALUES ('\${0:0:1}', '\${0:1:1}');\""
+echo {1..5}{a..z} | xargs -n 1 bash -c "psql --host=localhost --username=ubuntu --dbname=posgre -c \"INSERT INTO kawaiis VALUES ('\${0:0:1}', '\${0:1:1}');\""
 
 
 CREATE INDEX idx_kawaiis_generation ON kawaiis(generation, name);
