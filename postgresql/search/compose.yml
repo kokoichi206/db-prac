@@ -11,16 +11,26 @@ services:
       - postgres_volume:/var/lib/postgresql
       # - postgresql.conf:/var/lib/postgresql/data/postgresql.conf
 
-  postgrestest:
+  bigram:
     image: postgres:15
     environment:
       - POSTGRES_USER=ubuntu
       - POSTGRES_PASSWORD=sakamichi
       - POSTGRES_DB=nogi-official
-    ports:
-      - "5449:5432"
     volumes:
-      - postgres_volume:/var/lib/postgresql
-      # - postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+      - bigram_volume:/var/lib/postgresql
+    # - postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+
+  pgroonga:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=ubuntu
+      - POSTGRES_PASSWORD=sakamichi
+      - POSTGRES_DB=nogi-official
+    volumes:
+      - pgroonga_volume:/var/lib/postgresql
+    # - postgresql.conf:/var/lib/postgresql/data/postgresql.conf
 volumes:
   postgres_volume:
+  bigram_volume:
+  pgroonga_volume:

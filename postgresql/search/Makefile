@@ -8,5 +8,8 @@ DB_NAME="nogi-official"
 psql:	## docker compose で立てた DB 内に入る。
 	docker compose exec $(SERVICE) psql -U $(USER) $(DB_NAME)
 
-psql-test:	## docker compose で立てた DB 内に入る。
-	docker compose exec $(SERVICE)test psql -U $(USER) $(DB_NAME)
+bigram:	## docker compose で立てた DB 内に入る。
+	docker compose exec bigram psql -U $(USER) $(DB_NAME)
+
+pgroonga:	## docker compose で立てた DB 内に入る。
+	docker compose exec pgroonga psql -U $(USER) $(DB_NAME)

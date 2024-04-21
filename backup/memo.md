@@ -18,8 +18,11 @@ dc exec postgres pg_dump -U ubuntu -d nogi-official -F c > backup_0516
 
 pg_restore -C -d <db-name> backup_0516
 
-
+# table を絞る。
 pg_dump --username=ubuntu -t members -t blogs nogi-official > backup_members_blogs
+# 上のやつをリストア。
+## -T: tty の割り当てを無効化。
+dc exec -T postgres psql -U ubuntu -d nogi-official < backup_members
 
 dc exec postgres pg_dump --username=ubuntu -t members -t blogs nogi-official > backup_members_blogs
 ```
@@ -36,6 +39,8 @@ dc exec postgres psql -U ubuntu -d nogi-official-member-only-test < backup/backu
 
 dc exec postgres -U ubuntu 
 
+# 
+pg_restore -U ubuntu -c -Fc -d nogi-official backup_0516 
 ```
 
 
